@@ -24,64 +24,75 @@ const initializeDbAndServer = async () => {
 };
 initializeDbAndServer();
 
-// Get all Todos whose status is TO DO
-app.get("/todos/", async (request, response) => {
-  const { search_q, priority, status } = request.query;
-  const getToDosQuery = `
-    SELECT *
-    FROM todo 
-    WHERE status = '${status}'; 
-    `;
-  const todoDetails = await db.all(getToDosQuery);
-  response.send(todoDetails);
-});
-//get all Todos who priority is HIGH
+//get all Todo according to priority and status
+
+const hasStatusProperty = (requestQuery) => {
+  return requestQuery.status !== undefined;
+};
+
+const hasPriorityProperty = (requestQuery) => {
+  return requestQuery.priority !== undefined;
+};
+
+const hasPriorityAndStatus = (requestQuery) => {
+  return (
+    requestQuery.priority !== undefined && requestQuery.status !== undefined
+  );
+};
+
 app.get("/todos/", async (request, response) => {
   const { search_q = "", priority, status } = request.query;
-  const getQuery = `
-    SELECT *
-    FROM todo
-    WHERE priority = '${priority}';
-    `;
-  const dbResponse = await db.all(getQuery);
-  console.log(dbResponse);
+  let getQuery = "";
+  let dbResponse = null;
+
+  switch (true) {
+    case hasStatusProperty(request.query):
+      getQuery = `
+            SELECT *
+            FROM todo
+            WHERE status = '${status}';
+            `;
+      break;
+
+    case hasPriorityProperty(request.query):
+      getQuery = `
+          SELECT *
+          FROM todo
+          WHERE priority = '${priority}';
+          `;
+      break;
+
+    case hasPriorityAndStatus(request.query):
+      getQuery = `
+        SELECT *
+        FROM todo 
+        WHERE priority = '${priority}' AND status = '${status}';
+        `;
+      break;
+
+    default:
+      getQuery = `
+        SELECT * FROM todo WHERE todo LIKE '%${search_q}%';
+        `;
+  }
+
+  dbResponse = await db.all(getQuery);
   response.send(dbResponse);
 });
 
-//get all Todos who priority is HIGH and status IN PROGRESS
-app.get("/todos/", async (request, response) => {
-  const { search_q, priority, status } = request.query;
-  const getQuery = `
-    SELECT *
-    FROM todo
-    WHERE priority = '${priority}' AND status = '${status}';
-    `;
-  const dbResponse = await db.all(getQuery);
-  console.log(dbResponse);
-  response.send(dbResponse);
-});
-//get todos which contains play in todo column
-app.get("/todos/", async (request, response) => {
-  const { search_q, priority, status } = response.query;
-  const getQuery = `
-    SELECT *
-    FROM todo 
-    WHERE todo LIKE '%${search_q}%';
-    `;
-  const dbResponse = await db.all(getQuery);
-  response.send(dbResponse);
-});
-//Get specific todo based on the todoId
-app.get("/todos/:todoId/", async (request, response) => {
+//get Todo by todoId
+app.get("/todos/:todoId", async (request, response) => {
   const { todoId } = request.params;
   const getTodo = `
     SELECT *
-    FROM todo
+    FROM todo 
     WHERE id = ${todoId};
     `;
+
   const dbResponse = await db.get(getTodo);
   response.send(dbResponse);
 });
+
 //Create a todo
 app.post("/todos/", async (request, response) => {
   const { todoDetails } = request.body;
@@ -95,51 +106,47 @@ app.post("/todos/", async (request, response) => {
         '${status}');
     `;
   const dbResponse = await db.run(postTodo);
-  console.log(dbResponse);
   response.send("Todo Successfully Added");
 });
 //update todo status
-app.put("/todos/:todoId", async (request, response) => {
+app.put("/todos/:todoId/", async (request, response) => {
   const { todoId } = request.params;
-  const todoDetails = request.body;
-  const { status } = todoDetails;
-  const getQuery = `
-    UPDATE todo
-    SET status = ${status}
+  const requestBody = request.body;
+  let updateColumn = "";
+  switch (true) {
+    case requestBody.status !== undefined:
+      updateColumn = "Status";
+      break;
+    case requestBody.priority !== undefined:
+      updateColumn = "Priority";
+      break;
+    case requestBody.todo !== undefined:
+      updateColumn = "Todo";
+      break;
+  }
+  const previousTodoQuery = `
+    SELECT * 
+    FROM todo
     WHERE id = ${todoId};
     `;
-  await db.run(getQuery);
-  response.send("Status Updated");
-});
+  const previousTodo = await db.get(previousTodoQuery);
 
-//update todo priority
-//update todo
-app.put("/todos/:todoId", async (request, response) => {
-  const { todoId } = request.params;
-  const todoDetails = request.body;
-  const { priority } = todoDetails;
-  const getQuery = `
-    UPDATE todo
-    SET priority = ${priority}
-    WHERE id = ${todoId};
-    `;
-  await db.run(getQuery);
-  response.send("Priority Updated");
-});
+  const {
+    todo = previousTodo.todo,
+    priority = previousTodo.priority,
+    status = previousTodo.status,
+  } = request.body;
 
-//update todo
-//update todo
-app.put("/todos/:todoId", async (request, response) => {
-  const { todoId } = request.params;
-  const todoDetails = request.body;
-  const { todo } = todoDetails;
-  const getQuery = `
+  const updatedTodoQuery = `
     UPDATE todo
-    SET todo = ${todo}
+    SET todo = '${todo}',
+    priority = '${priority}',
+    status = '${status}'
     WHERE id = ${todoId};
     `;
-  await db.run(getQuery);
-  response.send("Todo Updated");
+
+  await db.run(updatedTodoQuery);
+  response.send(`${updateColumn} Updated`);
 });
 
 //delete a todo

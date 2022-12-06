@@ -14,8 +14,8 @@ GET http://localhost:3000/todos/7
 POST http://loclahost:3000/todos/ 
 Content-Type: application/json
 
-{
-  "id": 10,  
+{  
+  "id": 12,
   "todo": "Finalize event theme",
   "priority": "LOW",
   "status": "TO DO"
@@ -30,8 +30,9 @@ Content-Type: application/json
 }
 ###
 
-PUT http://loclahost:3000/todos/5
+PUT http://loclahost:3000/todos/6
 Content-Type: application/json
+
  {
       "priority": "HIGH"
     }
@@ -40,6 +41,7 @@ Content-Type: application/json
 
 PUT http://loclahost:3000/todos/5
 Content-Type: application/json
+
     {
       "todo": "Some task"
     }
