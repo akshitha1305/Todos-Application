@@ -95,7 +95,7 @@ app.get("/todos/:todoId", async (request, response) => {
 
 //Create a todo
 app.post("/todos/", async (request, response) => {
-  const { todoDetails } = request.body;
+  const todoDetails = request.body;
   const { id, todo, priority, status } = todoDetails;
   const postTodo = `
     INSERT INTO todo(id, todo, priority, status)
@@ -112,6 +112,7 @@ app.post("/todos/", async (request, response) => {
 app.put("/todos/:todoId/", async (request, response) => {
   const { todoId } = request.params;
   const requestBody = request.body;
+  console.log(requestBody);
   let updateColumn = "";
   switch (true) {
     case requestBody.status !== undefined:
